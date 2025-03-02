@@ -1,74 +1,70 @@
 import random
-from colorama import Fore, Style
+from colorama import Fore
 
-def generate_event(game):
-    events = [
-        {
-            "type": "disaster",
-            "text": f"{Fore.RED}🐀 Нашествие крыс атакует амбары!{Style.RESET_ALL}",
-            "comment": "Голодные грызуны уничтожают ваши запасы,\nно вы можете попытаться сократить потери.",
-            "options": {
-                "1": {
-                    "action": f"{Fore.GREEN}Мобилизовать народ на борьбу{Style.RESET_ALL}",
-                    "effects": {
-                        "resources": {"food": -0.2, "gold": -30},
-                        "stats": {"prosperity": 5}
-                    },
-                    "consequences": [
-                        "Народ работает день и ночь, сохраняя часть запасов",
-                        "Казна истощена организацией работ"
-                    ]
+EVENT_TEMPLATES = {
+    "crisis": {
+        "weight": 40,
+        "templates": [
+            {
+                "type": "rebellion",
+                "text": "Недовольство среди {group} из-за {reason}",
+                "vars": {
+                    "group": ["крестьян", "дворян", "торговцев"],
+                    "reason": ["налогов", "голода", "эпидемии"]
                 },
-                "2": {
-                    "action": f"{Fore.RED}Проигнорировать проблему{Style.RESET_ALL}",
-                    "effects": {
-                        "resources": {"food": -0.5}
+                "options": {
+                    "1": {
+                        "action": "Жестко подавить", 
+                        "effects": {"resources": {"army": -20}, "prosperity": -15}
                     },
-                    "consequences": [
-                        "Крысы размножаются в геометрической прогрессии",
-                        "Потеряно половина продовольствия"
-                    ]
+                    "2": {
+                        "action": "Пойти на уступки", 
+                        "effects": {"resources": {"gold": -50}, "prosperity": +10}
+                    }
                 }
             }
-        },
-        {
-            "type": "diplomacy",
-            "text": f"{Fore.CYAN}👑 Посол {random.choice(['Эльфийских земель', 'Гномьих кланов', 'Людских княжеств'])} требует аудиенции!{Style.RESET_ALL}",
-            "comment": "Иностранная делегация прибыла с важными предложениями,\nно их намерения не до конца ясны.",
-            "options": {
-                "1": {
-                    "action": f"{Fore.BLUE}Выслушать предложение{Style.RESET_ALL}",
-                    "effects": {
-                        "resources": {"gold": 120},
-                        "stats": {"relations": {"соседи": 20}}
-                    },
-                    "consequences": [
-                        "Заключен выгодный торговый договор",
-                        "В казну поступает золото в обмен на торговые привилегии"
-                    ]
+        ]
+    },
+    "opportunity": {
+        "weight": 35,
+        "templates": [
+            {
+                "type": "trade",
+                "text": "{trader} предлагает выгодную сделку",
+                "vars": {
+                    "trader": ["Купеческий караван", "Иностранные послы", "Гномьи торговцы"]
                 },
-                "2": {
-                    "action": f"{Fore.YELLOW}Отложить переговоры{Style.RESET_ALL}",
-                    "effects": {
-                        "stats": {"prosperity": -10}
+                "options": {
+                    "1": {
+                        "action": "Принять предложение", 
+                        "effects": {"resources": {"gold": 100}, "prosperity": +5}
                     },
-                    "consequences": [
-                        "Посольство уезжает недовольным",
-                        "Репутация королевства страдает"
-                    ]
-                },
-                "3": {
-                    "action": f"{Fore.RED}Арестовать посла{Style.RESET_ALL}",
-                    "effects": {
-                        "resources": {"army": -15},
-                        "stats": {"relations": {"соседи": -40}}
-                    },
-                    "consequences": [
-                        "Международный скандал!",
-                        "Армия теряет боевой дух от позорного приказа"
-                    ]
+                    "2": {
+                        "action": "Отказаться", 
+                        "effects": {"prosperity": -5}
+                    }
                 }
             }
+        ]
+    }
+}
+
+def generate_event():
+    event_type = random.choices(
+        list(EVENT_TEMPLATES.keys()),
+        weights=[t["weight"] for t in EVENT_TEMPLATES.values()],
+        k=1
+    )[0]
+    
+    template = random.choice(EVENT_TEMPLATES[event_type]["templates"])
+    variables = {k: random.choice(v) for k, v in template["vars"].items()}
+    
+    return {
+        "text": template["text"].format(**variables),
+        "options": {
+            k: {
+                "action": v["action"],
+                "effects": v["effects"]
+            } for k, v in template["options"].items()
         }
-    ]
-    return random.choice(events)
+    }
